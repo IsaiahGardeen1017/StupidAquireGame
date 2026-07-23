@@ -67,6 +67,9 @@ let pendingCredentialSubmission: { username: string; password: string } | null =
 let isIntentionalDisconnect = false;
 let purchaseShareCart: Array<number | null> = [null, null, null];
 let purchaseShareEndGame = false;
+let disposeTradeShares = 0;
+let disposeSellShares = 0;
+let awaitingServerActionAdvance = false;
 type ScrollAnchor = {
     scrollTop: number;
     distanceFromBottom: number;
@@ -137,6 +140,7 @@ const humanPlayer = new HumanPlayer("Human", {
                 break;
             case "determineHowManySharesToTradeInAfterMerge":
             case "determineHowManySharesToSell":
+                resetDisposeShareDraft();
                 appState.liveGame.pendingDecision = {
                     kind: "disposeShares",
                     survivingChain: request.survivingChain,
@@ -166,6 +170,7 @@ const humanPlayer = new HumanPlayer("Human", {
     onDecisionSettled() {
         appState.liveGame.pendingDecision = null;
         resetPurchaseShareDraft();
+        resetDisposeShareDraft();
         render();
     },
 });
@@ -716,19 +721,7 @@ function renderDecisionPanel() {
         case "selectChain":
             return renderChainSelectionPanel(pending.validChains);
         case "disposeShares":
-            return `
-        <div class="merge-panel">
-          <h4>Resolve Merger</h4>
-          <p class="merge-copy">${escapeHtml(pending.mergeChain)} into ${
-                escapeHtml(pending.survivingChain)
-            }</p>
-          <form id="dispose-form" class="stack compact-form">
-            <label>Trade shares <input name="trade" type="number" min="0" max="${pending.maxTrade}" value="0" step="2" /></label>
-            <label>Sell shares <input name="sell" type="number" min="0" max="${pending.maxSell}" value="0" /></label>
-            <button type="submit">Submit share disposal</button>
-          </form>
-        </div>
-      `;
+            return renderDisposeSharesPanel(pending);
         case "buyShares":
             return renderPurchasePanel(true);
     }
@@ -783,6 +776,63 @@ function renderChainSelectionPanel(validChains: readonly HotelChain[]) {
       </div>
       <div class="purchase-actions purchase-actions--placeholder" aria-hidden="true">
         <button type="button" disabled>Submit purchases</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderDisposeSharesPanel(pending: {
+    survivingChain: HotelChain;
+    mergeChain: HotelChain;
+    maxTrade: number;
+    maxSell: number;
+}) {
+    const summary = getDisposeShareSummary(pending);
+
+    return `
+    <div class="merge-panel">
+      <h4>Resolve Merger</h4>
+      <p class="merge-copy">${escapeHtml(pending.mergeChain)} into ${
+        escapeHtml(pending.survivingChain)
+    }</p>
+      <div class="merge-adjust-grid">
+        <section class="merge-adjust-card">
+          <h5>Trade 2 for 1</h5>
+          <div class="merge-adjust-value">${summary.trade}</div>
+          <div class="merge-adjust-actions">
+            <button type="button" data-dispose-trade-adjust="-2" ${
+        summary.trade === 0 ? "disabled" : ""
+    }>-2</button>
+            <button type="button" data-dispose-trade-adjust="2" ${
+        summary.trade >= pending.maxTrade ? "disabled" : ""
+    }>+2</button>
+          </div>
+          <p class="merge-adjust-meta">Max ${pending.maxTrade}</p>
+        </section>
+        <section class="merge-adjust-card">
+          <h5>Sell</h5>
+          <div class="merge-adjust-value">${summary.sell}</div>
+          <div class="merge-adjust-actions">
+            <button type="button" data-dispose-sell-adjust="-1" ${
+        summary.sell === 0 ? "disabled" : ""
+    }>-1</button>
+            <button type="button" data-dispose-sell-adjust="1" ${
+        summary.sell >= summary.sellCap ? "disabled" : ""
+    }>+1</button>
+          </div>
+          <p class="merge-adjust-meta">Max ${summary.sellCap}</p>
+        </section>
+        <section class="merge-adjust-card merge-adjust-card--summary">
+          <h5>Keep</h5>
+          <div class="merge-adjust-value">${summary.keep}</div>
+          <div class="merge-adjust-summary">
+            <div><span>Trade</span><strong>${summary.trade}</strong></div>
+            <div><span>Sell</span><strong>${summary.sell}</strong></div>
+          </div>
+        </section>
+      </div>
+      <div class="merge-submit-row">
+        <button id="dispose-submit" type="button">Submit share disposal</button>
       </div>
     </div>
   `;
@@ -1160,25 +1210,28 @@ function wireEvents() {
         () => humanPlayer.resolveDecision(Number(button.dataset.chainIndex)),
     ));
 
-    document.querySelector<HTMLFormElement>("#dispose-form")?.addEventListener(
-        "submit",
-        (event) => {
-            event.preventDefault();
-            if (!(event.currentTarget instanceof HTMLFormElement)) {
-                return;
-            }
+    document.querySelectorAll<HTMLButtonElement>("[data-dispose-trade-adjust]")
+        .forEach((button) =>
+            button.addEventListener("click", () => {
+                adjustDisposeTrade(
+                    Number(button.dataset.disposeTradeAdjust ?? 0),
+                );
+                render();
+            })
+        );
 
-            const formData = new FormData(event.currentTarget);
-            network.send(
-                COMMANDS_TO_SERVER.DoGameAction,
-                GAME_ACTIONS.DisposeOfShares,
-                Number(formData.get("trade") ?? 0),
-                Number(formData.get("sell") ?? 0),
-            );
-            appState.liveGame.pendingDecision = null;
-            render();
-        },
-    );
+    document.querySelectorAll<HTMLButtonElement>("[data-dispose-sell-adjust]")
+        .forEach((button) =>
+            button.addEventListener("click", () => {
+                adjustDisposeSell(Number(button.dataset.disposeSellAdjust ?? 0));
+                render();
+            })
+        );
+
+    document.querySelector<HTMLButtonElement>("#dispose-submit")
+        ?.addEventListener("click", () => {
+            submitDisposeShareDraft();
+        });
 
     document.querySelector<HTMLFormElement>("#buy-form")?.addEventListener(
         "submit",
@@ -1276,6 +1329,7 @@ function submitBuyDecision(purchase: SharePurchase, endGame = false) {
         return;
     }
 
+    awaitingServerActionAdvance = true;
     network.send(
         COMMANDS_TO_SERVER.DoGameAction,
         GAME_ACTIONS.PurchaseShares,
@@ -1284,6 +1338,65 @@ function submitBuyDecision(purchase: SharePurchase, endGame = false) {
     );
     appState.liveGame.pendingDecision = null;
     resetPurchaseShareDraft();
+    render();
+}
+
+function getDisposeShareSummary(pending: {
+    maxTrade: number;
+    maxSell: number;
+}) {
+    const trade = Math.max(0, Math.min(disposeTradeShares, pending.maxTrade));
+    const sellCap = Math.max(0, pending.maxSell - trade);
+    const sell = Math.max(0, Math.min(disposeSellShares, sellCap));
+    const keep = Math.max(0, pending.maxSell - trade - sell);
+
+    return { trade, sell, sellCap, keep };
+}
+
+function adjustDisposeTrade(delta: number) {
+    const pending = appState.liveGame.pendingDecision;
+    if (pending?.kind !== "disposeShares") {
+        return;
+    }
+
+    const nextTrade = Math.max(
+        0,
+        Math.min(disposeTradeShares + delta, pending.maxTrade),
+    );
+    disposeTradeShares = nextTrade - (nextTrade % 2);
+    const sellCap = Math.max(0, pending.maxSell - disposeTradeShares);
+    disposeSellShares = Math.min(disposeSellShares, sellCap);
+}
+
+function adjustDisposeSell(delta: number) {
+    const pending = appState.liveGame.pendingDecision;
+    if (pending?.kind !== "disposeShares") {
+        return;
+    }
+
+    const sellCap = Math.max(0, pending.maxSell - disposeTradeShares);
+    disposeSellShares = Math.max(
+        0,
+        Math.min(disposeSellShares + delta, sellCap),
+    );
+}
+
+function submitDisposeShareDraft() {
+    const pending = appState.liveGame.pendingDecision;
+    if (pending?.kind !== "disposeShares") {
+        return;
+    }
+
+    const summary = getDisposeShareSummary(pending);
+    awaitingServerActionAdvance = true;
+    network.send(
+        COMMANDS_TO_SERVER.DoGameAction,
+        GAME_ACTIONS.DisposeOfShares,
+        summary.trade,
+        summary.sell,
+    );
+    appState.liveGame.pendingDecision = null;
+    resetDisposeShareDraft();
     render();
 }
 
@@ -1386,6 +1499,8 @@ function applyServerMessage([command, ...payload]: [number, ...unknown[]]) {
             ? "lobby"
             : "game";
     }
+
+    syncPendingDecisionFromCurrentAction();
 }
 
 function applyClientData(payload: unknown[]) {
@@ -1777,7 +1892,9 @@ function computeBonuses(holdings: number[], price: number) {
 async function applyGameAction(payload: unknown[]) {
     const actionId = Number(payload[0]);
     const playerId = payload[1] === null ? null : Number(payload[1]);
-    const argument = payload[2];
+    const actionArguments = payload.slice(2);
+    const argument = actionArguments.length <= 1 ? actionArguments[0] : actionArguments;
+    awaitingServerActionAdvance = false;
     appState.liveGame.currentAction = {
         actionId: actionId as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
         playerId,
@@ -1795,6 +1912,7 @@ async function applyGameAction(payload: unknown[]) {
             gameState.self.validTiles,
             gameState.self.invalidTiles,
         );
+        awaitingServerActionAdvance = true;
         network.send(
             COMMANDS_TO_SERVER.DoGameAction,
             GAME_ACTIONS.PlayTile,
@@ -1805,6 +1923,7 @@ async function applyGameAction(payload: unknown[]) {
             gameState,
             mapChainIndexes(argument),
         );
+        awaitingServerActionAdvance = true;
         network.send(COMMANDS_TO_SERVER.DoGameAction, actionId, selectedIndex);
     } else if (
         actionId === GAME_ACTIONS.SelectMergerSurvivor ||
@@ -1817,9 +1936,11 @@ async function applyGameAction(payload: unknown[]) {
             mergeTile,
             mapChainIndexes(argument),
         );
+        awaitingServerActionAdvance = true;
         network.send(COMMANDS_TO_SERVER.DoGameAction, actionId, selectedIndex);
     } else if (actionId === GAME_ACTIONS.DisposeOfShares) {
         resetPurchaseShareDraft();
+        resetDisposeShareDraft();
         const defunctTypeId = Number(
             Array.isArray(argument) ? argument[0] : undefined,
         );
@@ -1873,6 +1994,106 @@ async function applyGameAction(payload: unknown[]) {
             canEndGame: canCurrentGameEnd(),
         };
         render();
+    }
+}
+
+function syncPendingDecisionFromCurrentAction() {
+    if (awaitingServerActionAdvance) {
+        return;
+    }
+
+    const currentAction = appState.liveGame.currentAction;
+    if (
+        currentAction === null ||
+        currentAction.playerId !== appState.liveGame.playerId ||
+        appState.liveGame.playerId === null
+    ) {
+        return;
+    }
+
+    if (appState.liveGame.pendingDecision !== null) {
+        return;
+    }
+
+    const gameState = createViewGameState(appState);
+
+    if (currentAction.actionId === GAME_ACTIONS.PlayTile) {
+        appState.liveGame.pendingDecision = {
+            kind: "playTile",
+            validTiles: gameState.self.validTiles,
+            invalidTilesInHand: gameState.self.invalidTiles,
+        };
+        return;
+    }
+
+    if (
+        currentAction.actionId === GAME_ACTIONS.SelectNewChain ||
+        currentAction.actionId === GAME_ACTIONS.SelectMergerSurvivor ||
+        currentAction.actionId === GAME_ACTIONS.SelectChainToDisposeOfNext
+    ) {
+        appState.liveGame.pendingDecision = {
+            kind: "selectChain",
+            validChains: mapChainIndexes(currentAction.argument),
+            actionId: currentAction.actionId,
+        };
+        return;
+    }
+
+    if (currentAction.actionId === GAME_ACTIONS.DisposeOfShares) {
+        resetDisposeShareDraft();
+        const argument = currentAction.argument;
+        const defunctTypeId = Number(
+            Array.isArray(argument) ? argument[0] : undefined,
+        );
+        const controllingTypeId = Number(
+            Array.isArray(argument) ? argument[1] : undefined,
+        );
+        const defunctChain = HOTEL_CHAINS[defunctTypeId];
+        const controllingChain = HOTEL_CHAINS[controllingTypeId];
+        if (defunctChain === undefined || controllingChain === undefined) {
+            return;
+        }
+
+        appState.liveGame.pendingDecision = {
+            kind: "disposeShares",
+            survivingChain: controllingChain,
+            mergeChain: defunctChain,
+            maxTrade: Math.floor(
+                Math.min(
+                    appState.liveGame
+                        .scoreSheet[appState.liveGame.playerId]?.[
+                            defunctTypeId
+                        ] ?? 0,
+                    (appState.liveGame.scoreSheet[6]?.[controllingTypeId] ??
+                        0) * 2,
+                ) / 2,
+            ) * 2,
+            maxSell: appState.liveGame.scoreSheet[
+                appState.liveGame.playerId
+            ]?.[defunctTypeId] ?? 0,
+        };
+        return;
+    }
+
+    if (currentAction.actionId === GAME_ACTIONS.PurchaseShares) {
+        const cash =
+            appState.liveGame.scoreSheet[appState.liveGame.playerId]?.[7] ?? 0;
+        resetPurchaseShareDraft();
+        appState.liveGame.pendingDecision = {
+            kind: "buyShares",
+            availableChains: HOTEL_CHAINS.filter((chain, index) =>
+                (appState.liveGame.scoreSheet[6]?.[index] ?? 0) > 0 &&
+                sharePriceForChain(
+                        index,
+                        appState.liveGame.scoreSheet[7]?.[index] ?? 0,
+                    ) > 0 &&
+                sharePriceForChain(
+                        index,
+                        appState.liveGame.scoreSheet[7]?.[index] ?? 0,
+                    ) <= cash
+            ),
+            canEndGame: canCurrentGameEnd(),
+        };
     }
 }
 
@@ -2025,6 +2246,11 @@ function submitPurchaseCart() {
 function resetPurchaseShareDraft() {
     purchaseShareCart = [null, null, null];
     purchaseShareEndGame = false;
+}
+
+function resetDisposeShareDraft() {
+    disposeTradeShares = 0;
+    disposeSellShares = 0;
 }
 
 function canCurrentGameEnd() {

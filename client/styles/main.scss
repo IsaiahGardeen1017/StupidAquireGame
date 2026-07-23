@@ -735,7 +735,6 @@ button {
 
 .decision-panel {
   --purchase-gap: 4px;
-  --purchase-cell-size: calc((100% - (6 * var(--purchase-gap))) / 7);
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -776,7 +775,7 @@ button {
 }
 
 .purchase-option-label {
-  font-size: 0.66rem;
+  font-size: clamp(0.68rem, 0.9vw, 0.95rem);
   font-weight: 700;
   text-align: center;
   color: #4e4439;
@@ -811,7 +810,7 @@ button {
 
 .purchase-share-meta,
 .purchase-share-price {
-  font-size: 0.7rem;
+  font-size: clamp(0.7rem, 0.95vw, 1rem);
   line-height: 1.1;
 }
 
@@ -820,7 +819,9 @@ button {
 }
 
 .purchase-share-meta {
-  color: #6e6a64;
+  color: inherit;
+  opacity: 0.8;
+  font-weight: 700;
 }
 
 .purchase-share-price--inactive {
@@ -830,13 +831,13 @@ button {
 .purchase-share-button--luxor,
 .purchase-cart-slot--luxor {
   background: #ff5151;
-  color: white;
+  color: #111;
 }
 
 .purchase-share-button--tower,
 .purchase-cart-slot--tower {
   background: #ffec69;
-  color: #2e2400;
+  color: #111;
 }
 
 .purchase-share-button--american,
@@ -848,7 +849,7 @@ button {
 .purchase-share-button--festival,
 .purchase-cart-slot--festival {
   background: #71df77;
-  color: #173e18;
+  color: #111;
 }
 
 .purchase-share-button--worldwide,
@@ -860,24 +861,24 @@ button {
 .purchase-share-button--continental,
 .purchase-cart-slot--continental {
   background: #71e6ef;
-  color: #14373b;
+  color: #111;
 }
 
 .purchase-share-button--imperial,
 .purchase-cart-slot--imperial {
   background: #e46ee9;
-  color: white;
+  color: #111;
 }
 
 .purchase-share-button--inactive {
-  background: #8d8d8d;
-  color: white;
-  border-color: #7b7b7b;
+  background: #b7b7b7;
+  color: #666;
+  border-color: #a5a5a5;
 }
 
 .purchase-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   align-items: start;
 }
@@ -888,17 +889,20 @@ button {
 }
 
 .purchase-cart {
-  width: calc((var(--purchase-cell-size) * 3) + (var(--purchase-gap) * 2));
-  flex: 0 0 auto;
+  grid-column: 1 / span 3;
+  width: 100%;
 }
 
 .purchase-cart-slots {
   display: grid;
-  grid-template-columns: repeat(3, var(--purchase-cell-size));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--purchase-gap);
 }
 
 .purchase-cart-slot {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
   text-align: center;
   place-items: center;
 }
@@ -911,14 +915,14 @@ button {
 }
 
 .purchase-cost {
+  grid-column: 7 / span 1;
   background: rgba(244, 238, 229, 0.82);
   border: 1px solid #d8ccbc;
   border-radius: 8px;
   padding: 6px;
-  width: var(--purchase-cell-size);
-  min-width: var(--purchase-cell-size);
-  min-height: var(--purchase-cell-size);
-  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -926,15 +930,17 @@ button {
 .purchase-cost-list {
   margin: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
   height: 100%;
   align-content: start;
+  font-size: clamp(0.58rem, 0.72vw, 0.8rem);
+  line-height: 1.05;
 }
 
 .purchase-cost-list div {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 4px;
 }
 
 .purchase-cost-list dt,
@@ -965,7 +971,7 @@ button {
 
 .merge-panel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .merge-panel h4 {
@@ -976,6 +982,64 @@ button {
   margin: 0;
   color: #5f5549;
   font-weight: 600;
+}
+
+.merge-adjust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.merge-adjust-card {
+  border: 1px solid #d8ccbc;
+  border-radius: 8px;
+  background: rgba(244, 238, 229, 0.82);
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.merge-adjust-card h5 {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.merge-adjust-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.merge-adjust-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.merge-adjust-actions button {
+  min-height: 34px;
+}
+
+.merge-adjust-meta {
+  margin: 0;
+  color: #6e6a64;
+  font-size: 0.78rem;
+}
+
+.merge-adjust-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.merge-adjust-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.merge-submit-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .purchase-endgame {
@@ -1004,6 +1068,10 @@ button {
 
   .purchase-row {
     flex-direction: column;
+  }
+
+  .merge-adjust-grid {
+    grid-template-columns: 1fr;
   }
 
   .decision-panel {
