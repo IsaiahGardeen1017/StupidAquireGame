@@ -1,12 +1,14 @@
 import {
     AcquireGameEngine,
     AcquirePlayer,
+    CodexSimpleAttempt,
     createSeededRandom,
     RandomPlayer,
 } from "./index.js";
+import { Nimrod } from "./players/Nimrod.js";
 
 const GAME_SEED = 20_260_726;
-const NUM_SIMS = 1000;
+const NUM_SIMS = 1;
 
 function randomNumber() {
     return Math.floor(Math.random() * 0x1_0000_0000);
@@ -14,12 +16,17 @@ function randomNumber() {
 
 function playerGenerator(
     name: string,
-    type: "rand",
+    type: "rand" | "codex" | "nimrod",
     seed?: number,
 ): AcquirePlayer {
     const s = seed
         ? createSeededRandom(seed)
         : createSeededRandom(randomNumber());
+    if (type === "nimrod") {
+        return new Nimrod(name);
+    } else if (type === "codex") {
+        return new CodexSimpleAttempt(name);
+    }
     return new RandomPlayer(name, s);
 }
 
@@ -28,7 +35,7 @@ const scoreCard: Record<string, number> = {
 };
 for (let i = 0; i < NUM_SIMS; i++) {
     const players = [
-        playerGenerator("rando 1", "rand"),
+        playerGenerator("nimrod", "nimrod"),
         playerGenerator("rando 2", "rand"),
         playerGenerator("rando 3", "rand"),
         playerGenerator("rando 4", "rand"),

@@ -1,22 +1,24 @@
 import type { GameState, HotelChain, SharePurchaseDecision, Tile } from "../game/types.js";
 
+export type MaybePromise<T> = T | Promise<T>;
+
 export abstract class AcquirePlayer {
   public constructor(public readonly name: string) {}
 
-  abstract playTile(gameState: GameState, validTiles: readonly Tile[], invalidTilesInHand: readonly Tile[]): Promise<number>;
+  abstract playTile(gameState: GameState, validTiles: readonly Tile[], invalidTilesInHand: readonly Tile[]): MaybePromise<number>;
 
-  abstract determineChainToStart(gameState: GameState, validChains: readonly HotelChain[]): Promise<number>;
+  abstract determineChainToStart(gameState: GameState, validChains: readonly HotelChain[]): MaybePromise<number>;
 
-  abstract buy(gameState: GameState): Promise<SharePurchaseDecision>;
+  abstract buy(gameState: GameState): MaybePromise<SharePurchaseDecision>;
 
-  abstract determineMergeSurvivor(gameState: GameState, mergeTile: Tile, possibleSurvivors: readonly HotelChain[]): Promise<number>;
+  abstract determineMergeSurvivor(gameState: GameState, mergeTile: Tile, possibleSurvivors: readonly HotelChain[]): MaybePromise<number>;
 
   public determineChainToDisposeOfNext(
     gameState: GameState,
     mergeTile: Tile,
     _survivingChain: HotelChain,
     possibleDefunctChains: readonly HotelChain[]
-  ): Promise<number> {
+  ): MaybePromise<number> {
     return this.determineMergeSurvivor(gameState, mergeTile, possibleDefunctChains);
   }
 
@@ -25,12 +27,12 @@ export abstract class AcquirePlayer {
     survivingChain: HotelChain,
     mergeChain: HotelChain,
     numTradesAvailable: number
-  ): Promise<number>;
+  ): MaybePromise<number>;
 
   abstract determineHowManySharesToSell(
     gameState: GameState,
     survivingChain: HotelChain,
     mergeChain: HotelChain,
     howManyIHave: number
-  ): Promise<number>;
+  ): MaybePromise<number>;
 }
