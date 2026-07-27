@@ -76,14 +76,28 @@ describe("RandomPlayer", () => {
     expect(new RandomPlayer("Seeded", 42).randInt()).toBe(new RandomPlayer("Also seeded", 42).randInt());
 
     const choices = [
+      await player.playTile(gameState, [{ row: "A", column: 1 }, { row: "A", column: 2 }], []),
       await player.determineChainToStart(gameState, ["Luxor", "Tower"]),
       await player.determineMergeSurvivor(gameState, { row: "B", column: 1 }, ["Luxor", "Tower"]),
+      await player.determineChainToDisposeOfNext(
+        gameState,
+        { row: "B", column: 1 },
+        "Luxor",
+        ["Tower", "American"]
+      ),
       await player.determineHowManySharesToTradeInAfterMerge(gameState, "Luxor", "Tower", 4),
       await player.determineHowManySharesToSell(gameState, "Luxor", "Tower", 3)
     ];
     const matchingChoices = [
+      await matchingPlayer.playTile(gameState, [{ row: "A", column: 1 }, { row: "A", column: 2 }], []),
       await matchingPlayer.determineChainToStart(gameState, ["Luxor", "Tower"]),
       await matchingPlayer.determineMergeSurvivor(gameState, { row: "B", column: 1 }, ["Luxor", "Tower"]),
+      await matchingPlayer.determineChainToDisposeOfNext(
+        gameState,
+        { row: "B", column: 1 },
+        "Luxor",
+        ["Tower", "American"]
+      ),
       await matchingPlayer.determineHowManySharesToTradeInAfterMerge(gameState, "Luxor", "Tower", 4),
       await matchingPlayer.determineHowManySharesToSell(gameState, "Luxor", "Tower", 3)
     ];
