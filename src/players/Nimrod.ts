@@ -36,40 +36,42 @@ export class Nimrod extends AcquirePlayer {
             const chainName = c as HotelChain;
             const chaindata = gameState.chains[chainName];
 
-            const holdings = gameState.players.map((player) => {
-                return {
-                    playerId: player.id,
-                    shares: player.shares[chainName]
-                };
-            });
+            if (chaindata.isActive) {
+                const holdings = gameState.players.map((player) => {
+                    return {
+                        playerId: player.id,
+                        shares: player.shares[chainName]
+                    };
+                });
 
-            const origBonuses = calculateBonusPayouts(holdings, chainName, chaindata.size);
-            const myOrigBonus = origBonuses.filter((bonus) => {
-                return bonus.playerId === me;
-            })[0]?.amount ?? 0;
+                const origBonuses = calculateBonusPayouts(holdings, chainName, chaindata.size);
+                const myOrigBonus = origBonuses.filter((bonus) => {
+                    return bonus.playerId === me;
+                })[0]?.amount ?? 0;
 
-            const numWouldBuy = Math.min(Math.floor(cashOnHand / chaindata.price), chaindata.availableShares);
+                const numWouldBuy = Math.min(Math.floor(cashOnHand / chaindata.price), chaindata.availableShares, 3);
 
-            holdings.forEach(holding => {
-                if (holding.playerId === me) {
-                    holding.shares += numWouldBuy;
-                }
-            });
+                holdings.forEach(holding => {
+                    if (holding.playerId === me) {
+                        holding.shares += numWouldBuy;
+                    }
+                });
 
-            const newBonuses = calculateBonusPayouts(holdings, chainName, chaindata.size);
-            const myNewBonus = newBonuses.filter((bonus) => {
-                return bonus.playerId === me;
-            })[0]?.amount ?? 0;
+                const newBonuses = calculateBonusPayouts(holdings, chainName, chaindata.size);
+                const myNewBonus = newBonuses.filter((bonus) => {
+                    return bonus.playerId === me;
+                })[0]?.amount ?? 0;
 
-            data.push({
-                chain: chainName,
-                hueristic: myNewBonus - myOrigBonus,
-                amount: numWouldBuy
-            });
+                data.push({
+                    chain: chainName,
+                    hueristic: myNewBonus - myOrigBonus,
+                    amount: numWouldBuy
+                });
+            }
         }
 
         const sorted = data.sort((a, b) => {
-            return a.hueristic - b.hueristic;
+            return b.hueristic - a.hueristic;
         });
         const selected = sorted[0];
 

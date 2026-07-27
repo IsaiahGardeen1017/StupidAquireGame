@@ -7,7 +7,7 @@ import {
 import { Nimrod } from "./players/Nimrod.js";
 
 const GAME_SEED = 20_260_726;
-const NUM_SIMS = 1;
+const NUM_SIMS = 100;
 
 function randomNumber() {
     return Math.floor(Math.random() * 0x1_0000_0000);
