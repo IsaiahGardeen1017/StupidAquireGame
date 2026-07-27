@@ -2,7 +2,6 @@ import {
     AcquireGameEngine,
     AcquirePlayer,
     CodexSimpleAttempt,
-    createSeededRandom,
     RandomPlayer,
 } from "./index.js";
 import { Nimrod } from "./players/Nimrod.js";
@@ -19,15 +18,13 @@ function playerGenerator(
     type: "rand" | "codex" | "nimrod",
     seed?: number,
 ): AcquirePlayer {
-    const s = seed
-        ? createSeededRandom(seed)
-        : createSeededRandom(randomNumber());
+    const playerSeed = seed ?? randomNumber();
     if (type === "nimrod") {
-        return new Nimrod(name);
+        return new Nimrod(name, playerSeed);
     } else if (type === "codex") {
-        return new CodexSimpleAttempt(name);
+        return new CodexSimpleAttempt(name, playerSeed);
     }
-    return new RandomPlayer(name, s);
+    return new RandomPlayer(name, playerSeed);
 }
 
 const scoreCard: Record<string, number> = {

@@ -1,4 +1,3 @@
-import { RandomSource } from "../game/AcquireGameEngine.js";
 import { calculateBonusPayouts } from "../game/rules.js";
 import { GameState, Tile, HotelChain, SharePurchaseDecision, SharePurchase } from "../game/types.js";
 import { AcquirePlayer } from "./AcquirePlayer.js";
@@ -9,9 +8,9 @@ export class Nimrod extends AcquirePlayer {
 
     randomRef: RandomPlayer;
 
-    public constructor(name = "Nimrod", private readonly random: RandomSource = Math.random) {
-        super(name);
-        this.randomRef = new RandomPlayer('idiot', random);
+    public constructor(name = "Nimrod", seed?: number) {
+        super(name, seed);
+        this.randomRef = new RandomPlayer('idiot', this.seed);
     }
 
 
@@ -95,4 +94,3 @@ export class Nimrod extends AcquirePlayer {
         return this.randomRef.determineHowManySharesToSell(gameState, survivingChain, mergeChain, howManyIHave);
     }
 }
-

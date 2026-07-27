@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AcquireGameEngine,
   CodexSimpleAttempt,
-  RandomPlayer,
-  createSeededRandom
+  RandomPlayer
 } from "../src/index.js";
 
 describe("CodexSimpleAttempt", () => {
@@ -14,7 +13,7 @@ describe("CodexSimpleAttempt", () => {
     for (let seed = 1; seed <= games; seed += 1) {
       const result = await new AcquireGameEngine([
         new CodexSimpleAttempt("Codex"),
-        new RandomPlayer("Random", createSeededRandom(seed * 17 + 3))
+        new RandomPlayer("Random", seed * 17 + 3)
       ], { seed }).run();
       const codex = result.finalScores.find((score) => score.playerName === "Codex");
       const random = result.finalScores.find((score) => score.playerName === "Random");
