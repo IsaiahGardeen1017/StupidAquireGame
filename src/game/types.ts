@@ -27,7 +27,7 @@ export type PlayerPublicState = Readonly<{
   name: string;
   cash: number;
   shares: Readonly<Record<HotelChain, number>>;
-  handSize: number;
+  handSize: number | null;
 }>;
 
 export type PlayerPrivateState = Readonly<PlayerPublicState & {
@@ -40,7 +40,11 @@ export type ChainState = Readonly<{
   chain: HotelChain;
   size: number;
   availableShares: number;
+  price: number;
+  majorityBonus: number;
+  minorityBonus: number;
   isActive: boolean;
+  isSafe: boolean;
 }>;
 
 export type TurnPhase =
@@ -53,13 +57,19 @@ export type TurnPhase =
 
 export type GameState = Readonly<{
   turnNumber: number;
-  activePlayerId: PlayerId;
+  activePlayerId: PlayerId | null;
   phase: TurnPhase;
   board: readonly BoardCell[];
   players: readonly PlayerPublicState[];
   self: PlayerPrivateState;
   chains: Readonly<Record<HotelChain, ChainState>>;
-  tilesRemaining: number;
+  tilesRemaining: number | null;
+  canEndGame: boolean;
 }>;
 
 export type SharePurchase = Partial<Record<HotelChain, number>>;
+
+export type SharePurchaseDecision = Readonly<{
+  purchase: SharePurchase;
+  endGame: boolean;
+}>;

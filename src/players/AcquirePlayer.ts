@@ -1,4 +1,4 @@
-import type { GameState, HotelChain, SharePurchase, Tile } from "../game/types.js";
+import type { GameState, HotelChain, SharePurchaseDecision, Tile } from "../game/types.js";
 
 export abstract class AcquirePlayer {
   public constructor(public readonly name: string) {}
@@ -7,9 +7,18 @@ export abstract class AcquirePlayer {
 
   abstract determineChainToStart(gameState: GameState, validChains: readonly HotelChain[]): Promise<number>;
 
-  abstract buy(gameState: GameState): Promise<SharePurchase>;
+  abstract buy(gameState: GameState): Promise<SharePurchaseDecision>;
 
   abstract determineMergeSurvivor(gameState: GameState, mergeTile: Tile, possibleSurvivors: readonly HotelChain[]): Promise<number>;
+
+  public determineChainToDisposeOfNext(
+    gameState: GameState,
+    mergeTile: Tile,
+    _survivingChain: HotelChain,
+    possibleDefunctChains: readonly HotelChain[]
+  ): Promise<number> {
+    return this.determineMergeSurvivor(gameState, mergeTile, possibleDefunctChains);
+  }
 
   abstract determineHowManySharesToTradeInAfterMerge(
     gameState: GameState,

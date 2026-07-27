@@ -1,4 +1,4 @@
-import type { GameState, HotelChain, SharePurchase, Tile } from "../game/types.js";
+import type { GameState, HotelChain, SharePurchaseDecision, Tile } from "../game/types.js";
 import { AcquirePlayer } from "./AcquirePlayer.js";
 
 type Deferred<T> = {
@@ -12,6 +12,13 @@ export type HumanDecisionRequest =
   | { kind: "determineChainToStart"; gameState: GameState; validChains: readonly HotelChain[] }
   | { kind: "buy"; gameState: GameState }
   | { kind: "determineMergeSurvivor"; gameState: GameState; mergeTile: Tile; possibleSurvivors: readonly HotelChain[] }
+  | {
+      kind: "determineChainToDisposeOfNext";
+      gameState: GameState;
+      mergeTile: Tile;
+      survivingChain: HotelChain;
+      possibleDefunctChains: readonly HotelChain[];
+    }
   | {
       kind: "determineHowManySharesToTradeInAfterMerge";
       gameState: GameState;
@@ -67,12 +74,27 @@ export class HumanPlayer extends AcquirePlayer {
     return this.requestDecision<number>({ kind: "determineChainToStart", gameState, validChains });
   }
 
-  public async buy(gameState: GameState): Promise<SharePurchase> {
-    return this.requestDecision<SharePurchase>({ kind: "buy", gameState });
+  public async buy(gameState: GameState): Promise<SharePurchaseDecision> {
+    return this.requestDecision<SharePurchaseDecision>({ kind: "buy", gameState });
   }
 
   public async determineMergeSurvivor(gameState: GameState, mergeTile: Tile, possibleSurvivors: readonly HotelChain[]): Promise<number> {
     return this.requestDecision<number>({ kind: "determineMergeSurvivor", gameState, mergeTile, possibleSurvivors });
+  }
+
+  public override async determineChainToDisposeOfNext(
+    gameState: GameState,
+    mergeTile: Tile,
+    survivingChain: HotelChain,
+    possibleDefunctChains: readonly HotelChain[]
+  ): Promise<number> {
+    return this.requestDecision<number>({
+      kind: "determineChainToDisposeOfNext",
+      gameState,
+      mergeTile,
+      survivingChain,
+      possibleDefunctChains
+    });
   }
 
   public async determineHowManySharesToTradeInAfterMerge(

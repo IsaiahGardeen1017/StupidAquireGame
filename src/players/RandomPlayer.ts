@@ -1,4 +1,4 @@
-import type { GameState, HotelChain, SharePurchase, Tile } from "../game/types.js";
+import type { GameState, HotelChain, SharePurchase, SharePurchaseDecision, Tile } from "../game/types.js";
 import { HOTEL_CHAINS } from "../game/types.js";
 import { AcquirePlayer } from "./AcquirePlayer.js";
 
@@ -17,25 +17,28 @@ export class RandomPlayer extends AcquirePlayer {
     return pickRandomIndex(validChains.length, this.random);
   }
 
-  public async buy(gameState: GameState): Promise<SharePurchase> {
-    const activeChains = HOTEL_CHAINS.filter((chain) => gameState.chains[chain].isActive);
+  public async buy(gameState: GameState): Promise<SharePurchaseDecision> {
     const purchase: SharePurchase = {};
-
-    if (activeChains.length === 0) {
-      return purchase;
-    }
-
+    let cashRemaining = gameState.self.cash;
     const totalSharesToBuy = Math.floor(this.random() * 4);
     for (let remaining = totalSharesToBuy; remaining > 0; remaining -= 1) {
-      const chain = activeChains[pickRandomIndex(activeChains.length, this.random)];
-      if (chain === undefined) {
-        throw new Error("Failed to choose an active hotel chain.");
+      const legalChains = HOTEL_CHAINS.filter((chain) => {
+        const chainState = gameState.chains[chain];
+        return chainState.isActive
+          && (purchase[chain] ?? 0) < chainState.availableShares
+          && chainState.price <= cashRemaining;
+      });
+      if (legalChains.length === 0) {
+        break;
       }
 
+      const chain = legalChains[pickRandomIndex(legalChains.length, this.random)];
+      if (chain === undefined) throw new Error("Failed to choose an affordable hotel chain.");
       purchase[chain] = (purchase[chain] ?? 0) + 1;
+      cashRemaining -= gameState.chains[chain].price;
     }
 
-    return purchase;
+    return { purchase, endGame: gameState.canEndGame && this.random() < 0.5 };
   }
 
   public async determineMergeSurvivor(_gameState: GameState, _mergeTile: Tile, possibleSurvivors: readonly HotelChain[]): Promise<number> {
@@ -48,7 +51,7 @@ export class RandomPlayer extends AcquirePlayer {
     _mergeChain: HotelChain,
     numTradesAvailable: number
   ): Promise<number> {
-    return randomIntInclusive(0, numTradesAvailable, this.random);
+    return randomIntInclusive(0, Math.floor(numTradesAvailable / 2), this.random) * 2;
   }
 
   public async determineHowManySharesToSell(

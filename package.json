@@ -1,22 +1,24 @@
 {
-  "name": "stupid-aquire-game",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "tsc --project tsconfig.json && vite build",
-    "dev": "vite",
-    "test": "vitest run"
-  },
-  "devDependencies": {
-    "@types/node": "^24.0.0",
-    "@types/sockjs-client": "^1.5.4",
-    "sass": "^1.89.2",
-    "typescript": "^5.9.2",
-    "vite": "^7.0.5",
-    "vitest": "^3.2.4"
-  },
-  "dependencies": {
-    "sockjs-client": "^1.6.1"
-  }
+    "name": "stupid-aquire-game",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "tsc --project tsconfig.json && vite build",
+        "dev": "vite",
+        "sim": "tsx src/simulate.ts",
+        "test": "vitest run"
+    },
+    "devDependencies": {
+        "@types/node": "^24.0.0",
+        "@types/sockjs-client": "^1.5.4",
+        "sass": "^1.89.2",
+        "tsx": "^4.20.3",
+        "typescript": "^5.9.2",
+        "vite": "^7.0.5",
+        "vitest": "^3.2.4"
+    },
+    "dependencies": {
+        "sockjs-client": "^1.6.1"
+    }
 }

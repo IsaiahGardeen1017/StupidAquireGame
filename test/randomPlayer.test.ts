@@ -53,11 +53,16 @@ function createGameState(): GameState {
           chain,
           size: chain === "Luxor" ? 2 : 0,
           availableShares: 25,
-          isActive: chain === "Luxor"
+          price: chain === "Luxor" ? 200 : 0,
+          majorityBonus: chain === "Luxor" ? 2000 : 0,
+          minorityBonus: chain === "Luxor" ? 1000 : 0,
+          isActive: chain === "Luxor",
+          isSafe: false
         }
       ])
     ) as GameState["chains"],
-    tilesRemaining: 100
+    tilesRemaining: 100,
+    canEndGame: false
   };
 }
 
@@ -84,13 +89,17 @@ describe("RandomPlayer", () => {
             chain,
             size: 0,
             availableShares: 25,
-            isActive: false
+            price: 0,
+            majorityBonus: 0,
+            minorityBonus: 0,
+            isActive: false,
+            isSafe: false
           }
         ])
       ) as GameState["chains"]
     };
 
-    await expect(player.buy(gameState)).resolves.toEqual({});
+    await expect(player.buy(gameState)).resolves.toEqual({ purchase: {}, endGame: false });
   });
 
   it("buys up to three shares across active chains", async () => {
@@ -104,6 +113,6 @@ describe("RandomPlayer", () => {
 
     const purchase = await player.buy(createGameState());
 
-    expect(purchase).toEqual({ Luxor: 3 });
+    expect(purchase).toEqual({ purchase: { Luxor: 3 }, endGame: false });
   });
 });
