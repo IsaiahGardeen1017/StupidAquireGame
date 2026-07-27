@@ -1,46 +1,63 @@
-import type { GameState, HotelChain, SharePurchase, SharePurchaseDecision, Tile } from "../game/types.js";
-import { HOTEL_CHAINS } from "../game/types.js";
+import type { GameState, HotelChain, SharePurchaseDecision, Tile } from "../game/types.js";
 import { AcquirePlayer } from "./AcquirePlayer.js";
+import { FullRandomBuyStrategy } from "./Strategies/Buy/FullRandomStrategy.js";
+import type { BuyStrategy } from "./Strategies/Buy/BuyStrategy.js";
+import type { DisposeChainStrategy } from "./Strategies/DisposeChain/DisposeChainStrategy.js";
+import { RandomDisposeChainStrategy } from "./Strategies/DisposeChain/RandomDisposeChainStrategy.js";
+import type { MergeSurvivorStrategy } from "./Strategies/MergeSurvivor/MergeSurvivorStrategy.js";
+import { RandomMergeSurvivorStrategy } from "./Strategies/MergeSurvivor/RandomMergeSurvivorStrategy.js";
+import type { PlayTileStrategy } from "./Strategies/PlayTile/PlayTileStrategy.js";
+import { RandomPlayTileStrategy } from "./Strategies/PlayTile/RandomPlayTileStrategy.js";
+import type { SellSharesStrategy } from "./Strategies/SellShares/SellSharesStrategy.js";
+import { RandomSellSharesStrategy } from "./Strategies/SellShares/RandomSellSharesStrategy.js";
+import type { StartChainStrategy } from "./Strategies/StartChain/StartChainStrategy.js";
+import { RandomStartChainStrategy } from "./Strategies/StartChain/RandomStartChainStrategy.js";
+import type { TradeSharesStrategy } from "./Strategies/TradeShares/TradeSharesStrategy.js";
+import { RandomTradeSharesStrategy } from "./Strategies/TradeShares/RandomTradeSharesStrategy.js";
 
 export class RandomPlayer extends AcquirePlayer {
+    public readonly playTileStrategy: PlayTileStrategy;
+    public readonly startChainStrategy: StartChainStrategy;
+    public readonly buyStrategy: BuyStrategy;
+    public readonly mergeSurvivorStrategy: MergeSurvivorStrategy;
+    public readonly disposeChainStrategy: DisposeChainStrategy;
+    public readonly tradeSharesStrategy: TradeSharesStrategy;
+    public readonly sellSharesStrategy: SellSharesStrategy;
+
     public constructor(name = "Random Player", seed?: number) {
         super(name, seed);
+        this.playTileStrategy = new RandomPlayTileStrategy(this);
+        this.startChainStrategy = new RandomStartChainStrategy(this);
+        this.buyStrategy = new FullRandomBuyStrategy(this);
+        this.mergeSurvivorStrategy = new RandomMergeSurvivorStrategy(this);
+        this.disposeChainStrategy = new RandomDisposeChainStrategy(this);
+        this.tradeSharesStrategy = new RandomTradeSharesStrategy(this);
+        this.sellSharesStrategy = new RandomSellSharesStrategy(this);
     }
 
     public async playTile(_gameState: GameState, validTiles: readonly Tile[], _invalidTilesInHand: readonly Tile[]): Promise<number> {
-        return this.pickRandomIndex(validTiles.length);
+        return this.playTileStrategy.decide(_gameState, validTiles, _invalidTilesInHand);
     }
 
     public async determineChainToStart(_gameState: GameState, validChains: readonly HotelChain[]): Promise<number> {
-        return this.pickRandomIndex(validChains.length);
+        return this.startChainStrategy.decide(_gameState, validChains);
     }
 
     public async buy(gameState: GameState): Promise<SharePurchaseDecision> {
-        const purchase: SharePurchase = {};
-        let cashRemaining = gameState.self.cash;
-        const totalSharesToBuy = this.randInt(0, 3);
-        for (let remaining = totalSharesToBuy; remaining > 0; remaining -= 1) {
-            const legalChains = HOTEL_CHAINS.filter((chain) => {
-                const chainState = gameState.chains[chain];
-                return chainState.isActive
-                    && (purchase[chain] ?? 0) < chainState.availableShares
-                    && chainState.price <= cashRemaining;
-            });
-            if (legalChains.length === 0) {
-                break;
-            }
-
-            const chain = legalChains[this.pickRandomIndex(legalChains.length)];
-            if (chain === undefined) throw new Error("Failed to choose an affordable hotel chain.");
-            purchase[chain] = (purchase[chain] ?? 0) + 1;
-            cashRemaining -= gameState.chains[chain].price;
-        }
-
-        return { purchase, endGame: gameState.canEndGame && this.randInt(0, 1) === 0 };
+        return this.buyStrategy.decide(gameState);
     }
 
     public async determineMergeSurvivor(_gameState: GameState, _mergeTile: Tile, possibleSurvivors: readonly HotelChain[]): Promise<number> {
-        return this.pickRandomIndex(possibleSurvivors.length);
+        return this.mergeSurvivorStrategy.decide(_gameState, _mergeTile, possibleSurvivors);
+    }
+
+    public override async determineChainToDisposeOfNext(
+        gameState: GameState,
+        mergeTile: Tile,
+        survivingChain: HotelChain,
+        possibleDefunctChains: readonly HotelChain[]
+    ): Promise<number> {
+        return this.disposeChainStrategy.decide(gameState, mergeTile, survivingChain, possibleDefunctChains);
     }
 
     public async determineHowManySharesToTradeInAfterMerge(
@@ -49,7 +66,7 @@ export class RandomPlayer extends AcquirePlayer {
         _mergeChain: HotelChain,
         numTradesAvailable: number
     ): Promise<number> {
-        return this.randInt(0, Math.floor(numTradesAvailable / 2)) * 2;
+        return this.tradeSharesStrategy.decide(_gameState, _survivingChain, _mergeChain, numTradesAvailable);
     }
 
     public async determineHowManySharesToSell(
@@ -58,13 +75,6 @@ export class RandomPlayer extends AcquirePlayer {
         _mergeChain: HotelChain,
         howManyIHave: number
     ): Promise<number> {
-        return this.randInt(0, howManyIHave);
-    }
-
-    private pickRandomIndex(length: number): number {
-        if (length <= 0) {
-            throw new Error("Cannot pick from an empty list.");
-        }
-        return this.randInt(0, length - 1);
+        return this.sellSharesStrategy.decide(_gameState, _survivingChain, _mergeChain, howManyIHave);
     }
 }
