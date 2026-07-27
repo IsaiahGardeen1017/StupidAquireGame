@@ -73,14 +73,14 @@ General Steps to accomplish success:
 
 1. Create a player interface that has everything needed for a Human player or an
    AI strategy to play the game. Additionally create an AIs stategy that uses
-   this interface which always picks an option at random.
+   this interface which always picks an option at random. (complete)
 
 2. Have a client that is fully able to connect and play games on the
    acquire.tlstyer.com server. It should look very similar to what is there
    currently. There is a reference repo contianing the code at /refs/acquire.
    This client should funnel Humna decisions throught the player interface (As
    human decisions will need to in a later step, the future engine should not
-   even know what players are human).
+   even know what players are human). (complete)
 
 3. Create a game engine that can simulate an entire game using player interface
    inheritors, this should generate an artifact documenting every decision and

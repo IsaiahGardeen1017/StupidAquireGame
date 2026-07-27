@@ -434,7 +434,7 @@ button {
 
 .board-column {
   grid-area: board;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .board-wrap {
@@ -515,7 +515,8 @@ button {
 }
 
 .board-cell--merge {
-  background: linear-gradient(135deg, #cfb07b, #fff);
+  background: linear-gradient(135deg, var(--merge-color-a, #cfb07b), var(--merge-color-b, #fff));
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .board-cell--cant-play-now {
@@ -551,6 +552,27 @@ button {
 
 .board-cell--imperial {
   background: #e46ee9;
+}
+
+.game-status {
+  display: block;
+  min-width: 0;
+  padding: 7px 10px;
+  overflow: hidden;
+  border: 1px solid #d8ccbc;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(76, 59, 38, 0.06);
+  color: #2b241c;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-status--action-required {
+  background: #f4a340;
+  border-color: #d98520;
 }
 
 .message-panels {
@@ -598,6 +620,14 @@ button {
 .history-line:last-child,
 .chat-line:last-child {
   border-bottom: none;
+}
+
+.history-player {
+  font-weight: 700;
+}
+
+.history-player--current {
+  color: #d96f12;
 }
 
 .compact-panel {
@@ -668,7 +698,7 @@ button {
   border-collapse: collapse;
   width: 100%;
   table-layout: auto;
-  font-size: 0.76rem;
+  font-size: 0.9rem;
 }
 
 .score-sheet th,
@@ -682,6 +712,21 @@ button {
 
 .score-sheet thead th {
   background: #efe8df;
+}
+
+.score-sheet td.score-cell--first {
+  background: #f5e9b8;
+  font-weight: 700;
+}
+
+.score-sheet td.score-cell--second {
+  background: #e5e7e9;
+  font-weight: 700;
+}
+
+.score-sheet td.score-cell--first-and-second {
+  background: #d9f1f4;
+  font-weight: 700;
 }
 
 .score-chain--luxor {
@@ -879,12 +924,12 @@ button {
 .purchase-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--purchase-gap);
   align-items: start;
 }
 
 .purchase-row--placeholder,
-.purchase-actions--placeholder {
+.purchase-row--placeholder .purchase-buy {
   visibility: hidden;
 }
 
@@ -916,6 +961,8 @@ button {
 
 .purchase-cost {
   grid-column: 7 / span 1;
+  align-self: end;
+  aspect-ratio: 1 / 1;
   background: rgba(244, 238, 229, 0.82);
   border: 1px solid #d8ccbc;
   border-radius: 8px;
@@ -925,6 +972,21 @@ button {
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.purchase-buy {
+  grid-column: 4 / span 1;
+  grid-row: 1;
+  align-self: end;
+  aspect-ratio: 1 / 1;
+}
+
+.purchase-buy button {
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  font-size: clamp(0.72rem, 1vw, 1rem);
+  font-weight: 800;
 }
 
 .purchase-cost-list {
@@ -1008,6 +1070,22 @@ button {
   font-size: 1.3rem;
   font-weight: 800;
   line-height: 1;
+}
+
+.merge-adjust-value--detail {
+  font-size: 1rem;
+}
+
+.merge-adjust-value--detail span {
+  white-space: nowrap;
+}
+
+.merge-adjust-card--dark {
+  color: #fff;
+}
+
+.merge-adjust-card--dark .merge-adjust-meta {
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .merge-adjust-actions {

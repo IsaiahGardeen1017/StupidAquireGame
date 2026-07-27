@@ -612,6 +612,12 @@ function renderGamePanel() {
           <div class="board-wrap">
             ${renderBoard()}
           </div>
+          <div class="game-status ${
+        appState.liveGame.playerId !== null &&
+            appState.liveGame.currentAction?.playerId === appState.liveGame.playerId
+            ? "game-status--action-required"
+            : ""
+    }" role="status" aria-live="polite">${renderStatus()}</div>
           <div class="message-panels game-bottom-panels">
             <section class="message-panel">
               <h3>Game History</h3>
@@ -655,12 +661,16 @@ function renderStatus() {
 
     const actorName = appState.liveGame.currentAction.playerId === null
         ? "server"
+        : appState.liveGame.currentAction.playerId === appState.liveGame.playerId
+        ? "You"
         : appState.games[appState.liveGame.gameId ?? -1]
             ?.players[appState.liveGame.currentAction.playerId]?.username ??
             `Player ${appState.liveGame.currentAction.playerId + 1}`;
-    return `${
-        describeGameAction(appState.liveGame.currentAction.actionId)
-    }: ${actorName}`;
+    return appState.liveGame.currentAction.playerId === null
+        ? `Game status: ${describeGameAction(appState.liveGame.currentAction.actionId)}.`
+        : `${escapeHtml(actorName)} needs to ${
+            describeGameAction(appState.liveGame.currentAction.actionId)
+        }.`;
 }
 
 function renderBoard() {
@@ -704,7 +714,7 @@ function renderTileRack() {
 
             return `<button class="tile ${
                 boardClassName(entry.typeId)
-            }" data-tile-index="${index}">${entry.tile.column}${entry.tile.row}</button>`;
+            }" ${mergeTileStyle(entry)} data-tile-index="${index}">${entry.tile.column}${entry.tile.row}</button>`;
         })
         .join("");
 }
@@ -773,9 +783,9 @@ function renderChainSelectionPanel(validChains: readonly HotelChain[]) {
             <div><dt>Left</dt><dd>0</dd></div>
           </dl>
         </section>
-      </div>
-      <div class="purchase-actions purchase-actions--placeholder" aria-hidden="true">
-        <button type="button" disabled>Submit purchases</button>
+        <div class="purchase-buy">
+          <button type="button" disabled>Buy</button>
+        </div>
       </div>
     </div>
   `;
@@ -788,6 +798,18 @@ function renderDisposeSharesPanel(pending: {
     maxSell: number;
 }) {
     const summary = getDisposeShareSummary(pending);
+    const mergeChainIndex = HOTEL_CHAINS.indexOf(pending.mergeChain);
+    const survivingChainIndex = HOTEL_CHAINS.indexOf(pending.survivingChain);
+    const playerRow = appState.liveGame.scoreSheet[
+        appState.liveGame.playerId ?? 0
+    ] ?? [];
+    const survivingSharesAfter = (playerRow[survivingChainIndex] ?? 0) +
+        summary.trade;
+    const salePrice = sharePriceForChain(
+        mergeChainIndex,
+        appState.liveGame.scoreSheet[7]?.[mergeChainIndex] ?? 0,
+    );
+    const additionalCash = summary.sell * salePrice * 100;
 
     return `
     <div class="merge-panel">
@@ -796,9 +818,15 @@ function renderDisposeSharesPanel(pending: {
         escapeHtml(pending.survivingChain)
     }</p>
       <div class="merge-adjust-grid">
-        <section class="merge-adjust-card">
+        <section class="merge-adjust-card merge-adjust-card--chain ${
+        survivingChainIndex === 2 || survivingChainIndex === 4
+            ? "merge-adjust-card--dark"
+            : ""
+    }" style="background: ${hotelChainColor(survivingChainIndex)}">
           <h5>Trade 2 for 1</h5>
-          <div class="merge-adjust-value">${summary.trade}</div>
+          <div class="merge-adjust-value merge-adjust-value--detail">Trade ${
+        summary.trade
+    } <span>(total ${survivingSharesAfter})</span></div>
           <div class="merge-adjust-actions">
             <button type="button" data-dispose-trade-adjust="-2" ${
         summary.trade === 0 ? "disabled" : ""
@@ -811,7 +839,9 @@ function renderDisposeSharesPanel(pending: {
         </section>
         <section class="merge-adjust-card">
           <h5>Sell</h5>
-          <div class="merge-adjust-value">${summary.sell}</div>
+          <div class="merge-adjust-value merge-adjust-value--detail">${summary.sell} <span>(+$${
+        additionalCash.toLocaleString()
+    })</span></div>
           <div class="merge-adjust-actions">
             <button type="button" data-dispose-sell-adjust="-1" ${
         summary.sell === 0 ? "disabled" : ""
@@ -822,7 +852,11 @@ function renderDisposeSharesPanel(pending: {
           </div>
           <p class="merge-adjust-meta">Max ${summary.sellCap}</p>
         </section>
-        <section class="merge-adjust-card merge-adjust-card--summary">
+        <section class="merge-adjust-card merge-adjust-card--summary merge-adjust-card--chain ${
+        mergeChainIndex === 2 || mergeChainIndex === 4
+            ? "merge-adjust-card--dark"
+            : ""
+    }" style="background: ${hotelChainColor(mergeChainIndex)}">
           <h5>Keep</h5>
           <div class="merge-adjust-value">${summary.keep}</div>
           <div class="merge-adjust-summary">
@@ -842,6 +876,9 @@ function renderPurchasePanel(showCart: boolean) {
     const pending = appState.liveGame.pendingDecision;
     const buySummary = getBuySummary();
     const buyTotals = getPurchaseCartSummary(buySummary);
+    const buyButtonLabel = purchaseShareCart.every((entry) => entry === null)
+        ? "Pass"
+        : "Buy";
 
     return `
     <div class="purchase-panel">
@@ -897,17 +934,17 @@ function renderPurchasePanel(showCart: boolean) {
             <div><dt>Left</dt><dd>${buyTotals.cashLeft * 100}</dd></div>
           </dl>
         </section>
+        <div class="purchase-buy">
+          <button id="buy-submit" type="button">${buyButtonLabel}</button>
+        </div>
       </div>
-      <div class="purchase-actions">
-        ${
+      ${
                 pending?.kind === "buyShares" && pending.canEndGame
-                    ? `<label class="purchase-endgame"><input id="buy-end-game" type="checkbox" ${
+                    ? `<div class="purchase-actions"><label class="purchase-endgame"><input id="buy-end-game" type="checkbox" ${
                         purchaseShareEndGame ? "checked" : ""
-                    } /> End game</label>`
+                    } /> End game</label></div>`
                     : ""
             }
-        <button id="buy-submit" type="button">Submit purchases</button>
-      </div>
       `
             : `<div class="purchase-panel-spacer"></div>`
     }
@@ -930,7 +967,14 @@ function renderScoreSheet() {
         const player = game?.players[index];
         const shareCells = Array.from(
             { length: 7 },
-            (_, shareIndex) => `<td>${row[shareIndex] ?? ""}</td>`,
+            (_, shareIndex) => {
+                const placement = sharePlacementClass(
+                    derived.playerRows,
+                    index,
+                    shareIndex,
+                );
+                return `<td class="${placement}">${row[shareIndex] ?? ""}</td>`;
+            },
         ).join("");
         return `
       <tr class="${
@@ -939,15 +983,17 @@ function renderScoreSheet() {
         <th>${escapeHtml(player?.username ?? `Player ${index + 1}`)}</th>
         ${shareCells}
         <td>${formatMoneyCell(row[7])}</td>
-        <td>${formatMoneyCell(row[8])}</td>
+        <td class="${finalScorePlacementClass(derived.playerRows, index)}">${
+            formatMoneyCell(row[8])
+        }</td>
       </tr>
     `;
     }).join("");
 
     const summaryRows = [
-        { label: "Available", values: derived.available },
-        { label: "Chain Size", values: derived.chainSizes },
         { label: "Price ($00)", values: derived.prices },
+        { label: "Chain Size", values: derived.chainSizes },
+        { label: "Available", values: derived.available },
     ]
         .map(
             (row) => `
@@ -980,6 +1026,54 @@ function renderScoreSheet() {
       </tbody>
     </table>
   `;
+}
+
+function sharePlacementClass(
+    playerRows: number[][],
+    playerIndex: number,
+    chainIndex: number,
+) {
+    const holdings = playerRows.map((row) => row[chainIndex] ?? 0);
+    const amount = holdings[playerIndex] ?? 0;
+    if (amount <= 0) {
+        return "";
+    }
+
+    const highest = Math.max(...holdings);
+    if (amount === highest) {
+        if (holdings.filter((value) => value > 0).length === 1) {
+            return "score-cell--first-and-second";
+        }
+        return "score-cell--first";
+    }
+
+    // A tie for first combines the first- and second-place bonuses, so there
+    // is no separately shaded second place in that chain.
+    if (holdings.filter((value) => value === highest).length > 1) {
+        return "";
+    }
+
+    const secondHighest = Math.max(
+        ...holdings.filter((value) => value < highest),
+    );
+    return amount === secondHighest ? "score-cell--second" : "";
+}
+
+function finalScorePlacementClass(playerRows: number[][], playerIndex: number) {
+    const score = playerRows[playerIndex]?.[8];
+    if (score === undefined) {
+        return "";
+    }
+
+    const distinctScores = [...new Set(
+        playerRows.map((row) => row[8]).filter((value): value is number =>
+            value !== undefined
+        ),
+    )].sort((left, right) => right - left);
+    if (score === distinctScores[0]) {
+        return "score-cell--first";
+    }
+    return score === distinctScores[1] ? "score-cell--second" : "";
 }
 
 function renderHistory() {
@@ -1474,11 +1568,16 @@ function applyServerMessage([command, ...payload]: [number, ...unknown[]]) {
             void applyGameAction(payload);
             break;
         case COMMANDS_TO_CLIENT.AddGameHistoryMessage:
-            appState.liveGame.history.push(formatHistoryEntry(payload));
+            if (Number(payload[0]) !== GAME_HISTORY_MESSAGES.TurnBegan) {
+                appState.liveGame.history.push(formatHistoryEntry(payload));
+            }
             break;
         case COMMANDS_TO_CLIENT.AddGameHistoryMessages:
             for (const entry of (payload[0] as unknown[])) {
-                if (Array.isArray(entry)) {
+                if (
+                    Array.isArray(entry) &&
+                    Number(entry[0]) !== GAME_HISTORY_MESSAGES.TurnBegan
+                ) {
                     appState.liveGame.history.push(formatHistoryEntry(entry));
                 }
             }
@@ -1553,6 +1652,81 @@ function applyGameState(payload: unknown[]) {
     existingGame.maxPlayers = maxPlayers;
     existingGame.score = score;
     appState.games[gameId] = existingGame;
+
+    if (
+        stateId === GAME_STATES.Completed &&
+        appState.liveGame.gameId === gameId
+    ) {
+        const finalScores = Array.isArray(payload[4])
+            ? payload[4].map(Number)
+            : undefined;
+        appendFinalRanking(finalScores);
+    }
+}
+
+function appendFinalRanking(serverScores?: number[]) {
+    if (
+        appState.liveGame.history.some((entry) =>
+            entry.includes('class="history-final-ranking"')
+        )
+    ) {
+        return;
+    }
+
+    const game = appState.games[appState.liveGame.gameId ?? -1];
+    const playerCount = game?.players.length ?? 0;
+    if (playerCount === 0) {
+        return;
+    }
+
+    const derivedScores = deriveScoreSheetValues(playerCount).playerRows.map(
+        (row) => row[8] ?? 0,
+    );
+    const ranked = Array.from({ length: playerCount }, (_, playerId) => ({
+        playerId,
+        score: serverScores?.[playerId] ?? derivedScores[playerId] ?? 0,
+    })).sort((left, right) =>
+        right.score - left.score || left.playerId - right.playerId
+    );
+
+    let previousScore: number | undefined;
+    let previousRank = 0;
+    const standings = ranked.map((entry, index) => {
+        const rank = entry.score === previousScore ? previousRank : index + 1;
+        previousScore = entry.score;
+        previousRank = rank;
+        const name = `<strong class="history-player ${
+            entry.playerId === appState.liveGame.playerId
+                ? "history-player--current"
+                : ""
+        }">${escapeHtml(playerDisplayName(entry.playerId))}</strong>`;
+        return `${ordinal(rank)}: ${name} ($${
+            (entry.score * 100).toLocaleString()
+        })`;
+    });
+
+    appState.liveGame.history.push(
+        `<span class="history-final-ranking">Final standings — ${
+            standings.join("; ")
+        }</span>`,
+    );
+}
+
+function ordinal(value: number) {
+    const lastTwoDigits = value % 100;
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
+        return `${value}th`;
+    }
+    switch (value % 10) {
+        case 1:
+            return `${value}st`;
+        case 2:
+            return `${value}nd`;
+        case 3:
+            return `${value}rd`;
+        default:
+            return `${value}th`;
+    }
 }
 
 function isSelfInLobbyGame(gameId: number) {
@@ -2323,10 +2497,47 @@ function tileName(x: number, y: number) {
     return `${x + 1}${String.fromCharCode(y + 65)}`;
 }
 
+function mergeTileStyle(entry: NonNullable<typeof appState.liveGame.tileRack[number]>) {
+    if (entry.typeId !== GAME_BOARD_TYPES.WillMergeChains) {
+        return "";
+    }
+
+    const x = entry.tile.column - 1;
+    const y = entry.tile.row.charCodeAt(0) - 65;
+    const neighboringChainIds = [
+        [x - 1, y],
+        [x + 1, y],
+        [x, y - 1],
+        [x, y + 1],
+    ].map(([neighborX, neighborY]) =>
+        appState.liveGame.board.find((cell) =>
+            cell.x === neighborX && cell.y === neighborY
+        )?.typeId
+    ).filter((typeId): typeId is number =>
+        typeId !== undefined && typeId >= 0 && typeId <= GAME_BOARD_TYPES.Imperial
+    );
+    const uniqueChainIds = [...new Set(neighboringChainIds)];
+    if (uniqueChainIds.length < 2) {
+        return "";
+    }
+
+    return `style="--merge-color-a: ${hotelChainColor(uniqueChainIds[0]!)}; --merge-color-b: ${
+        hotelChainColor(uniqueChainIds[1]!)
+    };"`;
+}
+
+function hotelChainColor(chainIndex: number) {
+    return ["#ff5151", "#ffec69", "#5982ff", "#71df77", "#9d6c2f", "#71e6ef", "#e46ee9"][chainIndex] ?? "#fff";
+}
+
 function formatHistoryEntry(payload: unknown[]) {
     const messageId = Number(payload[0]);
     const playerId = payload[1] === null ? null : Number(payload[1]);
-    const playerName = playerId === null ? "" : playerDisplayName(playerId);
+    const playerName = playerId === null
+        ? ""
+        : `<strong class="history-player ${
+            playerId === appState.liveGame.playerId ? "history-player--current" : ""
+        }">${escapeHtml(playerDisplayName(playerId))}</strong>`;
     const argument2 = payload[2];
     const argument3 = payload[3];
     const argument4 = payload[4];
@@ -2342,7 +2553,7 @@ function formatHistoryEntry(payload: unknown[]) {
             return `${playerName} started the game.`;
         case GAME_HISTORY_MESSAGES.DrewTile:
             return playerId === appState.liveGame.playerId
-                ? `You drew tile ${
+                ? `${playerName} drew tile ${
                     tileName(Number(argument2), Number(argument3))
                 }.`
                 : `${playerName} drew a tile.`;
@@ -2391,7 +2602,7 @@ function formatHistoryEntry(payload: unknown[]) {
         case GAME_HISTORY_MESSAGES.AllTilesPlayed:
             return "All tiles have been played. Game end forced.";
         default:
-            return JSON.stringify(payload);
+            return escapeHtml(JSON.stringify(payload));
     }
 }
 
