@@ -1,5 +1,4 @@
 import { GameState, HOTEL_CHAINS, SharePurchase, SharePurchaseDecision } from "../../../game/types.js";
-import { pickRandomIndex } from "../StrategyUtils.js";
 import { BuyStrategy } from "./BuyStrategy.js";
 
 
@@ -19,7 +18,7 @@ export class FullRandomBuyStrategy extends BuyStrategy {
                 break;
             }
 
-            const chain = legalChains[pickRandomIndex(legalChains.length, this.randInt)];
+            const chain = legalChains[this.pickRandomIndex(legalChains.length)];
             if (chain === undefined) throw new Error("Failed to choose an affordable hotel chain.");
             purchase[chain] = (purchase[chain] ?? 0) + 1;
             cashRemaining -= gameState.chains[chain].price;
