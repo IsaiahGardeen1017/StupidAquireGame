@@ -7,7 +7,7 @@ import {
 import { Nimrod } from "./players/Nimrod.js";
 
 const GAME_SEED = 20_260_726;
-const NUM_SIMS = 100;
+const NUM_SIMS = 1000;
 
 function randomNumber() {
     return Math.floor(Math.random() * 0x1_0000_0000);
@@ -33,7 +33,7 @@ const scoreCard: Record<string, number> = {
 for (let i = 0; i < NUM_SIMS; i++) {
     const players = [
         playerGenerator("nimrod", "nimrod"),
-        playerGenerator("rando 2", "rand"),
+        playerGenerator("codex", "codex"),
         playerGenerator("rando 3", "rand"),
         playerGenerator("rando 4", "rand"),
     ];
