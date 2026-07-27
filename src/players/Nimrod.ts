@@ -43,20 +43,16 @@ export class Nimrod extends AcquirePlayer {
                         shares: player.shares[chainName]
                     };
                 });
-
                 const origBonuses = calculateBonusPayouts(holdings, chainName, chaindata.size);
                 const myOrigBonus = origBonuses.filter((bonus) => {
                     return bonus.playerId === me;
                 })[0]?.amount ?? 0;
-
                 const numWouldBuy = Math.min(Math.floor(cashOnHand / chaindata.price), chaindata.availableShares, 3);
-
                 holdings.forEach(holding => {
                     if (holding.playerId === me) {
                         holding.shares += numWouldBuy;
                     }
                 });
-
                 const newBonuses = calculateBonusPayouts(holdings, chainName, chaindata.size);
                 const myNewBonus = newBonuses.filter((bonus) => {
                     return bonus.playerId === me;
@@ -69,12 +65,10 @@ export class Nimrod extends AcquirePlayer {
                 });
             }
         }
-
         const sorted = data.sort((a, b) => {
             return b.hueristic - a.hueristic;
         });
         const selected = sorted[0];
-
         const purchase: SharePurchase = {};
         if (selected) {
             purchase[selected?.chain] = selected.amount;
@@ -84,7 +78,6 @@ export class Nimrod extends AcquirePlayer {
             purchase,
             endGame: false
         }
-
     }
     determineMergeSurvivor(gameState: GameState, mergeTile: Tile, possibleSurvivors: readonly HotelChain[]): Promise<number> {
         return this.randomRef.determineMergeSurvivor(gameState, mergeTile, possibleSurvivors);
