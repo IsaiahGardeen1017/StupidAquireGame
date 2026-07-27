@@ -1,12 +1,40 @@
 import { calculateBonusPayouts } from "../../game/rules.js";
-import { GameState, HotelChain, SharePurchase, SharePurchaseDecision } from "../../game/types.js";
+import { GameState, HOTEL_CHAINS, HotelChain, SharePurchase, SharePurchaseDecision } from "../../game/types.js";
+import { pickRandomIndex, randInteger, RandomIntFunction } from "./StrategyUtils.js";
 
-export type BuyStrategyFunction = (gameState: GameState) => SharePurchaseDecision;
-export type BuyStrategy = 'SimpleSingleChain'
+export type BuyStrategyFunction = (gameState: GameState, randFunc?: RandomIntFunction) => SharePurchaseDecision;
+export type BuyStrategy = 'SimpleSingleChain' | 'FullRandom';
 
 
-export const BuyStrategies: Record<string, BuyStrategyFunction> = {
-    'SimpleSingleChain': simpleBuyOneChainWithBiggestBonusDiff
+export const BuyStrategies: Record<BuyStrategy, BuyStrategyFunction> = {
+    'SimpleSingleChain': simpleBuyOneChainWithBiggestBonusDiff,
+    'FullRandom': fullRandom,
+}
+
+
+function fullRandom(gameState: GameState, randFunc?: RandomIntFunction) {
+    const randInt = randFunc ?? randInteger;
+    const purchase: SharePurchase = {};
+    let cashRemaining = gameState.self.cash;
+    const totalSharesToBuy = randInt(0, 3);
+    for (let remaining = totalSharesToBuy; remaining > 0; remaining -= 1) {
+        const legalChains = HOTEL_CHAINS.filter((chain) => {
+            const chainState = gameState.chains[chain];
+            return chainState.isActive
+                && (purchase[chain] ?? 0) < chainState.availableShares
+                && chainState.price <= cashRemaining;
+        });
+        if (legalChains.length === 0) {
+            break;
+        }
+
+        const chain = legalChains[pickRandomIndex(legalChains.length, randInt)];
+        if (chain === undefined) throw new Error("Failed to choose an affordable hotel chain.");
+        purchase[chain] = (purchase[chain] ?? 0) + 1;
+        cashRemaining -= gameState.chains[chain].price;
+    }
+
+    return { purchase, endGame: gameState.canEndGame && randInt(0, 1) === 0 };
 }
 
 function simpleBuyOneChainWithBiggestBonusDiff(gameState: GameState): SharePurchaseDecision {
