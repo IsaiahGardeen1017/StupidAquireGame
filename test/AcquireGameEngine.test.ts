@@ -5,7 +5,6 @@ import {
   AcquirePlayer,
   InvalidPlayerDecisionError,
   RandomPlayer,
-  createSeededRandom,
   type GameState,
   type HotelChain,
   type SharePurchaseDecision,
@@ -14,10 +13,10 @@ import {
 
 function createDeterministicGame(seed: number) {
   return new AcquireGameEngine([
-    new RandomPlayer("Ada", createSeededRandom(seed + 1)),
-    new RandomPlayer("Babbage", createSeededRandom(seed + 2)),
-    new RandomPlayer("Curie", createSeededRandom(seed + 3)),
-    new RandomPlayer("Dijkstra", createSeededRandom(seed + 4))
+    new RandomPlayer("Ada", seed + 1),
+    new RandomPlayer("Babbage", seed + 2),
+    new RandomPlayer("Curie", seed + 3),
+    new RandomPlayer("Dijkstra", seed + 4)
   ], { seed });
 }
 

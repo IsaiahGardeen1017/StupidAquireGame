@@ -24,8 +24,8 @@ import { AcquirePlayer } from "./AcquirePlayer.js";
  * defunct stock stranded without a reason.
  */
 export class CodexSimpleAttempt extends AcquirePlayer {
-  public constructor(name = "Codex Simple") {
-    super(name);
+  public constructor(name = "Codex Simple", seed?: number) {
+    super(name, seed);
   }
 
   public async playTile(
