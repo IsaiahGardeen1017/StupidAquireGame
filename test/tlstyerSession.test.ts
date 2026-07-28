@@ -71,6 +71,8 @@ describe("tlstyer game-session adapter", () => {
 
     transport.receive(
       [COMMANDS_TO_CLIENT.SetGameBoardCell, 0, 0, GAME_BOARD_TYPES.Luxor],
+      [COMMANDS_TO_CLIENT.SetGameBoardCell, 1, 0, GAME_BOARD_TYPES.NothingYet],
+      [COMMANDS_TO_CLIENT.SetGameBoardCell, 2, 0, GAME_BOARD_TYPES.CantPlayEver],
       [COMMANDS_TO_CLIENT.SetScoreSheet, [[
         [2, 0, 0, 0, 0, 0, 0, 60],
         [1, 0, 0, 0, 0, 0, 0, 60]
@@ -98,6 +100,11 @@ describe("tlstyer game-session adapter", () => {
 
     const pending = snapshot.pendingDecision;
     if (pending?.kind !== "playTile") throw new Error("Expected a tile decision.");
+    expect(pending.gameState.board).toEqual([
+      { tile: { row: "A", column: 1 }, kind: "chain", chain: "Luxor" },
+      { tile: { row: "A", column: 2 }, kind: "independent" },
+      { tile: { row: "A", column: 3 }, kind: "dead" }
+    ]);
     await session.execute({
       kind: "submitDecision",
       requestId: pending.id,

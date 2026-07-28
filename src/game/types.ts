@@ -17,10 +17,10 @@ export type Tile = Readonly<{
 
 export type PlayerId = string;
 
-export type BoardCell = Readonly<{
-  tile: Tile;
-  chain: HotelChain | null;
-}>;
+export type BoardCell =
+  | Readonly<{ tile: Tile; kind: "independent" }>
+  | Readonly<{ tile: Tile; kind: "dead" }>
+  | Readonly<{ tile: Tile; kind: "chain"; chain: HotelChain }>;
 
 export type PlayerPublicState = Readonly<{
   id: PlayerId;
