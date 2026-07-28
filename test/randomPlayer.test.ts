@@ -10,7 +10,11 @@ function createGameState(): GameState {
     turnNumber: 1,
     activePlayerId: "player-1",
     phase: "playTile",
-    board: [{ tile: tileA, chain: null }, { tile: tileB, chain: "Luxor" }],
+    board: [
+      { tile: tileA, kind: "independent" },
+      { tile: tileB, kind: "chain", chain: "Luxor" },
+      { tile: { row: "A", column: 3 }, kind: "dead" }
+    ],
     players: [
       {
         id: "player-1",

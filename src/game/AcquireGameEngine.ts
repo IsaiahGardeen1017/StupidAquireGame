@@ -619,10 +619,9 @@ export class AcquireGameEngine {
     };
     const board: BoardCell[] = [...this.board.values()]
       .sort((left, right) => compareTiles(left.tile, right.tile))
-      .map(({ tile, occupant }) => ({
-        tile: copyTile(tile),
-        chain: isHotelChain(occupant) ? occupant : null
-      }));
+      .map(({ tile, occupant }): BoardCell => isHotelChain(occupant)
+        ? { tile: copyTile(tile), kind: "chain", chain: occupant }
+        : { tile: copyTile(tile), kind: occupant });
     return {
       turnNumber: this.turnNumber,
       activePlayerId: this.players[this.activePlayerIndex]?.id ?? null,

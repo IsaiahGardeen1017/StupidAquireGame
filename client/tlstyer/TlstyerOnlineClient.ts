@@ -2,6 +2,7 @@ import {
   GameSessionCommandError,
   HOTEL_CHAINS,
   tilesEqual,
+  type BoardCell,
   type BuySharesDecisionRequest,
   type CurrentGameAction,
   type DisposeSharesDecisionRequest,
@@ -988,10 +989,14 @@ class TlstyerGameSession implements GameSession {
       turnNumber: Math.max(this.history.filter((entry) => entry.event.kind === "turnBegan").length, 1),
       activePlayerId: this.turnPlayerId === null ? null : String(this.turnPlayerId),
       phase: phaseFromAction(this.currentAction?.actionId),
-      board: this.board.filter((cell) => cell.typeId !== GAME_BOARD_TYPES.Nothing).map((cell) => ({
-        tile: protocolTile(cell.x, cell.y),
-        chain: chainFromTypeId(cell.typeId)
-      })),
+      board: this.board.flatMap<BoardCell>((cell) => {
+        const tile = protocolTile(cell.x, cell.y);
+        const chain = chainFromTypeId(cell.typeId);
+        if (chain !== null) return [{ tile, kind: "chain", chain }];
+        if (cell.typeId === GAME_BOARD_TYPES.NothingYet) return [{ tile, kind: "independent" }];
+        if (cell.typeId === GAME_BOARD_TYPES.CantPlayEver) return [{ tile, kind: "dead" }];
+        return [];
+      }),
       players: players.map((player) => ({
         id: player.id,
         name: player.name,

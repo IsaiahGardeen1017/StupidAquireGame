@@ -146,8 +146,8 @@ function evaluateTile(gameState: GameState, tile: Tile): number {
     .map((neighbor) => boardByTile.get(tileKey(neighbor)))
     .filter((cell) => cell !== undefined);
   const neighboringChains = HOTEL_CHAINS.filter((chain) =>
-    neighboringCells.some((cell) => cell.chain === chain));
-  const hasIndependentNeighbor = neighboringCells.some((cell) => cell.chain === null);
+    neighboringCells.some((cell) => cell.kind === "chain" && cell.chain === chain));
+  const hasIndependentNeighbor = neighboringCells.some((cell) => cell.kind === "independent");
 
   if (neighboringChains.length === 0) {
     if (!hasIndependentNeighbor) return 100;
